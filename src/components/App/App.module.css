@@ -1,7 +1,8 @@
 @import "../../styles/vars.css";
 
 .container {
-  width: 100ch;
+  padding: 1rem;
+  max-width: 100ch;
   margin: 0 auto;
   height: 100vh;
   display: flex;

@@ -18,11 +18,75 @@ import {
 } from "../Communique/useCommunique";
 import s from "./App.module.css";
 
+const COMMUNIQUE_HOST =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:8080"
+    : "https://communique.jeffh.dev";
+
 function CreateOrJoinRoom() {
-  const [type, setType] = useState<"create" | "join" | null>(null);
+  const history = useHistory();
+
+  return (
+    <div>
+      <div>
+        <button onClick={() => history.push("/create")}>Create a Room</button>
+        <button onClick={() => history.push("/join")}>Join a Room</button>
+      </div>
+    </div>
+  );
+}
+
+function Join() {
+  const [nic, setNic] = useState("");
+  const history = useHistory();
+  const location = useLocation();
+
+  const hash = new URLSearchParams(location.hash.replace("#", ""));
+
+  const [room, setRoom] = useState(hash.get("room") || "");
+  const [key, setKey] = useState(hash.get("key") || "");
+
+  return (
+    <div>
+      <div>
+        <div>
+          <label htmlFor="room">Room Name</label>
+          <input
+            type="text"
+            id="room"
+            onChange={(e) => setRoom(e.target.value)}
+            value={room}
+          />
+        </div>
+        <div>
+          <label htmlFor="nic">Your Name</label>
+          <input
+            type="text"
+            id="nic"
+            onChange={(e) => setNic(e.target.value)}
+            value={nic}
+          />
+        </div>
+        <div>
+          <label htmlFor="key">Room Key</label>
+          <input
+            type="text"
+            id="key"
+            onChange={(e) => setKey(e.target.value)}
+            value={key}
+          />
+        </div>
+        <button onClick={() => history.push(`/${room}#nic=${nic}&key=${key}`)}>
+          Join
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Create() {
   const [room, setRoom] = useState("");
   const [nic, setNic] = useState("");
-  const [key, setKey] = useState("");
   const history = useHistory();
 
   function createRoom() {
@@ -33,69 +97,27 @@ function CreateOrJoinRoom() {
 
   return (
     <div>
-      {type === null ? (
+      <div>
         <div>
-          <button onClick={() => setType("create")}>Create a Room</button>
-          <button onClick={() => setType("join")}>Join a Room</button>
+          <label htmlFor="room">Room Name</label>
+          <input
+            type="text"
+            id="room"
+            onChange={(e) => setRoom(e.target.value)}
+            value={room}
+          />
         </div>
-      ) : type === "create" ? (
         <div>
-          <div>
-            <label htmlFor="room">Room Name</label>
-            <input
-              type="text"
-              id="room"
-              onChange={(e) => setRoom(e.target.value)}
-              value={room}
-            />
-          </div>
-          <div>
-            <label htmlFor="nic">Your Name</label>
-            <input
-              type="text"
-              id="nic"
-              onChange={(e) => setNic(e.target.value)}
-              value={nic}
-            />
-          </div>
-          <button onClick={createRoom}>Create</button>
+          <label htmlFor="nic">Your Name</label>
+          <input
+            type="text"
+            id="nic"
+            onChange={(e) => setNic(e.target.value)}
+            value={nic}
+          />
         </div>
-      ) : (
-        <div>
-          <div>
-            <label htmlFor="room">Room Name</label>
-            <input
-              type="text"
-              id="room"
-              onChange={(e) => setRoom(e.target.value)}
-              value={room}
-            />
-          </div>
-          <div>
-            <label htmlFor="nic">Your Name</label>
-            <input
-              type="text"
-              id="nic"
-              onChange={(e) => setNic(e.target.value)}
-              value={nic}
-            />
-          </div>
-          <div>
-            <label htmlFor="key">Room Key</label>
-            <input
-              type="text"
-              id="key"
-              onChange={(e) => setKey(e.target.value)}
-              value={key}
-            />
-          </div>
-          <button
-            onClick={() => history.push(`/${room}#nic=${nic}&key=${key}`)}
-          >
-            Join
-          </button>
-        </div>
-      )}
+        <button onClick={createRoom}>Create</button>
+      </div>
     </div>
   );
 }
@@ -108,7 +130,7 @@ function Room() {
   return (
     // @ts-ignore
     <CommuniqueProvider
-      host="https://communique.jeffh.dev"
+      host={COMMUNIQUE_HOST}
       topic={room}
       secret={hash.get("key") || ""}
       loader={() => "loading..."}
@@ -247,6 +269,8 @@ function App() {
       <div className={s.container}>
         <Switch>
           <Route path="/" exact children={<CreateOrJoinRoom />} />
+          <Route path="/create" exact children={<Create />} />
+          <Route path="/join" exact children={<Join />} />
           <Route path="/:room" exact children={<Room />} />
         </Switch>
       </div>
