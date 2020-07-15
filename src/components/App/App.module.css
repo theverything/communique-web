@@ -13,14 +13,14 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  padding: 20px 0;
 }
 
 .messages {
-  display: flex;
   flex: 1;
+  display: flex;
   flex-direction: column-reverse;
-  margin-bottom: 2ch;
+  max-height: calc(100vh - 14ch - 2rem);
+  overflow-y: auto;
 }
 
 .nic {
@@ -36,6 +36,8 @@
   margin: 0;
   font-family: var(--font-family);
   white-space: pre-line;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 
 .message {
@@ -44,6 +46,47 @@
   padding: 1ch 2ch;
   background-color: lightblue;
   margin-top: 1ch;
+}
+
+.newMessage {
+  padding-top: 1ch;
+  display: flex;
+  height: 14ch;
+  position: relative;
+}
+
+.newMessageInput {
+  flex: 1;
+  padding: 1ch;
+  font-size: 1rem;
+  font-family: var(--font-family);
+  margin-right: 1ch;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+}
+
+.newMessageBtn {
+  flex: 1;
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.newMessageBtn:last-child {
+  margin-bottom: 0;
+}
+
+.emoji {
+  position: absolute;
+  right: 0;
+  bottom: 11ch;
+  display: none;
+}
+
+.emojiOpen {
+  display: block;
 }
 
 .decay {
@@ -89,44 +132,4 @@
 
 .decay9 {
   color: #dadada;
-}
-
-.newMessage {
-  display: flex;
-  height: 10ch;
-  position: relative;
-}
-
-.newMessageInput {
-  flex: 1;
-  padding: 1ch;
-  font-size: 1rem;
-  font-family: var(--font-family);
-  margin-right: 1ch;
-}
-
-.buttons {
-  display: flex;
-  flex-direction: column;
-}
-
-.newMessageBtn {
-  flex: 1;
-  margin-bottom: 0.5rem;
-  font-size: 1.5rem;
-}
-
-.newMessageBtn:last-child {
-  margin-bottom: 0;
-}
-
-.emoji {
-  position: absolute;
-  right: 0;
-  bottom: 11ch;
-  display: none;
-}
-
-.emojiOpen {
-  display: block;
 }

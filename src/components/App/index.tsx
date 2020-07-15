@@ -144,6 +144,7 @@ function Room() {
 }
 
 function Messages() {
+  const container = useRef<HTMLDivElement>(null);
   const [messages, updateMessages] = useState<Message[]>([]);
   const onMessage = useCallback((msg: Message) => {
     updateMessages((msgs) => [
@@ -153,6 +154,10 @@ function Messages() {
         decay: Math.max(msg.decay, Math.floor(i / 2)),
       })),
     ]);
+
+    requestAnimationFrame(() => {
+      container.current!.scrollTop = container.current!.scrollHeight;
+    });
   }, []);
 
   useOnMessage(onMessage);
@@ -174,7 +179,7 @@ function Messages() {
   }, []);
 
   return (
-    <div className={s.messages}>
+    <div className={s.messages} ref={container}>
       {messages.map((msg, i) => (
         <ChatMessage key={msg.id} {...msg} />
       ))}
