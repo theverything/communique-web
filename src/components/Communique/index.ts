@@ -1,11 +1,27 @@
-export type Listener = (msg: Message) => void;
+export type MessageListener = (msg: Message) => void;
+export type MembershipListener = (members: number) => void;
 
-export interface CommuniqueMessage {
-  nic: string;
-  msg: string;
+type CommuniqueDispatch =
+  | CommuniqueDispatchMessage
+  | CommuniqueDispatchMembership;
+
+interface CommuniqueDispatchMessage {
+  type: "message";
+  payload: string;
 }
 
-export interface Message extends CommuniqueMessage {
+interface CommuniqueDispatchMembership {
+  type: "membership";
+  payload: number;
+}
+
+export interface CommuniqueMessagePayload {
+  nic: string;
+  msg: string;
+  ts: number;
+}
+
+export interface Message extends CommuniqueMessagePayload {
   id: string;
   decay: number;
 }
@@ -91,7 +107,7 @@ export class LockBox {
     );
   }
 
-  async encrypt(msg: CommuniqueMessage): Promise<string> {
+  async encrypt(msg: CommuniqueMessagePayload): Promise<string> {
     const encrypted = await window.crypto.subtle.encrypt(
       {
         name: "AES-GCM",
@@ -104,15 +120,15 @@ export class LockBox {
     return ab2str(encrypted);
   }
 
-  async decrypt(data: string): Promise<CommuniqueMessage> {
-    const payload = str2ab(JSON.parse(data));
+  async decrypt(data: string): Promise<CommuniqueMessagePayload> {
+    const payload = str2ab(data);
     const decrypted = await window.crypto.subtle.decrypt(
       { name: "AES-GCM", iv: new Uint8Array(12) },
       this._key,
       payload
     );
     const decoded = new window.TextDecoder().decode(new Uint8Array(decrypted));
-    const msg = JSON.parse(decoded) as CommuniqueMessage;
+    const msg = JSON.parse(decoded) as CommuniqueMessagePayload;
 
     return msg;
   }
@@ -123,7 +139,8 @@ export class Communique {
   private _host: string;
   private _eventSource: EventSource;
   private _lockBox: LockBox;
-  private _listeners: Listener[];
+  private _msgListeners: MessageListener[];
+  private _membershipListeners: MembershipListener[];
 
   constructor(
     host: string,
@@ -135,27 +152,61 @@ export class Communique {
     this._topic = topic;
     this._eventSource = eventSource;
     this._lockBox = lockBox;
-    this._listeners = [];
+    this._msgListeners = [];
+    this._membershipListeners = [];
 
     this._eventSource.addEventListener("message", async (e) => {
-      const msg = (await this._lockBox.decrypt(e.data)) as Message;
+      const dispatch = JSON.parse(e.data) as CommuniqueDispatch;
 
-      msg.id = "msg_" + Math.random().toString(36).substr(2, 9);
-      msg.decay = 0;
-
-      this._listeners.forEach((l) => {
-        l(msg);
-      });
+      switch (dispatch.type) {
+        case "message":
+          this._handleMessage(e.lastEventId, dispatch.payload);
+          break;
+        case "membership":
+          this._handleMembership(dispatch.payload);
+          break;
+        default:
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const _exhaustiveCheck: never = dispatch;
+          break;
+      }
     });
 
     this._eventSource.addEventListener("ping", (e) => {}, false);
   }
 
-  onMessage = (listener: Listener) => {
-    this._listeners.push(listener);
+  private async _handleMessage(id: string, payload: string) {
+    const msg = (await this._lockBox.decrypt(payload)) as Message;
+
+    msg.id = id;
+    msg.decay = 0;
+
+    this._msgListeners.forEach((l) => {
+      l(msg);
+    });
+  }
+
+  private async _handleMembership(payload: number) {
+    this._membershipListeners.forEach((l) => {
+      l(payload);
+    });
+  }
+
+  onMessage = (listener: MessageListener) => {
+    this._msgListeners.push(listener);
 
     return () => {
-      this._listeners = this._listeners.filter((l) => l !== listener);
+      this._msgListeners = this._msgListeners.filter((l) => l !== listener);
+    };
+  };
+
+  onMembership = (listener: MembershipListener) => {
+    this._membershipListeners.push(listener);
+
+    return () => {
+      this._membershipListeners = this._membershipListeners.filter(
+        (l) => l !== listener
+      );
     };
   };
 
@@ -163,7 +214,7 @@ export class Communique {
     this._eventSource.close();
   };
 
-  sendMessage = async (msg: CommuniqueMessage) => {
+  sendMessage = async (msg: CommuniqueMessagePayload) => {
     const payload = await this._lockBox.encrypt(msg);
 
     return fetch(`${this._host}/api/dispatch`, {

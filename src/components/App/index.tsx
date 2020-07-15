@@ -6,6 +6,7 @@ import {
   useParams,
   useLocation,
   useHistory,
+  Link,
 } from "react-router-dom";
 import cx from "classnames";
 import "emoji-mart/css/emoji-mart.css";
@@ -15,6 +16,7 @@ import {
   Provider as CommuniqueProvider,
   useOnMessage,
   useSendMessage,
+  useOnMembership,
 } from "../Communique/useCommunique";
 import s from "./App.module.css";
 
@@ -23,16 +25,31 @@ const COMMUNIQUE_HOST =
     ? "http://localhost:8080"
     : "https://communique.jeffh.dev";
 
-function CreateOrJoinRoom() {
-  const history = useHistory();
-
+function Eye() {
   return (
-    <div>
-      <div>
-        <button onClick={() => history.push("/create")}>Create a Room</button>
-        <button onClick={() => history.push("/join")}>Join a Room</button>
-      </div>
-    </div>
+    <svg className={s.eye} viewBox="0 0 512 512">
+      <path
+        d="M255.66,112c-77.94,0-157.89,45.11-220.83,135.33a16,16,0,0,0-.27,17.77C82.92,340.8,161.8,400,255.66,400,348.5,400,429,340.62,477.45,264.75a16.14,16.14,0,0,0,0-17.47C428.89,172.28,347.8,112,255.66,112Z"
+        style={{
+          fill: "none",
+          stroke: "#000",
+          strokeLinecap: "round",
+          strokeLinejoin: "round",
+          strokeWidth: 32,
+        }}
+      />
+      <circle
+        cx="256"
+        cy="256"
+        r="80"
+        style={{
+          fill: "none",
+          stroke: "#000",
+          strokeMiterlimit: 10,
+          strokeWidth: 32,
+        }}
+      />
+    </svg>
   );
 }
 
@@ -43,81 +60,68 @@ function Join() {
 
   const hash = new URLSearchParams(location.hash.replace("#", ""));
 
-  const [room, setRoom] = useState(hash.get("room") || "");
-  const [key, setKey] = useState(hash.get("key") || "");
+  const room = hash.get("room") || "";
+  const key = hash.get("key") || "";
 
   return (
-    <div>
-      <div>
-        <div>
-          <label htmlFor="room">Room Name</label>
-          <input
-            type="text"
-            id="room"
-            onChange={(e) => setRoom(e.target.value)}
-            value={room}
-          />
-        </div>
-        <div>
-          <label htmlFor="nic">Your Name</label>
-          <input
-            type="text"
-            id="nic"
-            onChange={(e) => setNic(e.target.value)}
-            value={nic}
-          />
-        </div>
-        <div>
-          <label htmlFor="key">Room Key</label>
-          <input
-            type="text"
-            id="key"
-            onChange={(e) => setKey(e.target.value)}
-            value={key}
-          />
-        </div>
-        <button onClick={() => history.push(`/${room}#nic=${nic}&key=${key}`)}>
-          Join
-        </button>
+    <div className={s.join}>
+      <div className={s.nicInput}>
+        <label htmlFor="nic">Your Name</label>
+        <input
+          type="text"
+          id="nic"
+          onChange={(e) => setNic(e.target.value)}
+          value={nic}
+        />
       </div>
+      <button onClick={() => history.push(`/${room}#nic=${nic}&key=${key}`)}>
+        Join
+      </button>
     </div>
   );
 }
 
 function Create() {
-  const [room, setRoom] = useState("");
-  const [nic, setNic] = useState("");
-  const history = useHistory();
+  const [state, setState] = useState({ room: "", key: "" });
 
   function createRoom() {
-    LockBox.generateKey().then((jwk) => {
-      history.push(`/${room}#nic=${nic}&key=${jwk}`);
+    LockBox.generateKey().then((key) => {
+      const room = "room_" + Math.random().toString(36).substr(2, 9);
+      setState({ room, key });
     });
   }
 
   return (
-    <div>
-      <div>
-        <div>
-          <label htmlFor="room">Room Name</label>
-          <input
-            type="text"
-            id="room"
-            onChange={(e) => setRoom(e.target.value)}
-            value={room}
-          />
-        </div>
-        <div>
-          <label htmlFor="nic">Your Name</label>
-          <input
-            type="text"
-            id="nic"
-            onChange={(e) => setNic(e.target.value)}
-            value={nic}
-          />
-        </div>
-        <button onClick={createRoom}>Create</button>
-      </div>
+    <div className={s.create}>
+      {state.key !== "" ? (
+        <>
+          <div>Share the link below with your friends to chat.</div>
+          <Link to={`/join#room=${state.room}&key=${state.key}`}>
+            Join Room {state.room}
+          </Link>
+        </>
+      ) : (
+        <>
+          <h1>Create a new room</h1>
+          <button onClick={createRoom}>Do It</button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Members() {
+  const [members, updateMembers] = useState();
+  const onMembership = useCallback((m) => {
+    updateMembers(m);
+  }, []);
+
+  useOnMembership(onMembership);
+
+  return (
+    <div className={s.members}>
+      <span>{members}</span>
+      <Eye />
     </div>
   );
 }
@@ -136,6 +140,7 @@ function Room() {
       loader={() => "loading..."}
     >
       <div className={s.room}>
+        <Members />
         <Messages />
         <NewMessage nic={hash.get("nic") || ""} />
       </div>
@@ -180,7 +185,7 @@ function Messages() {
 
   return (
     <div className={s.messages} ref={container}>
-      {messages.map((msg, i) => (
+      {messages.map((msg) => (
         <ChatMessage key={msg.id} {...msg} />
       ))}
     </div>
@@ -194,7 +199,7 @@ function NewMessage({ nic }: { nic: string }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const submitMessage = useCallback(() => {
     if (msg !== "") {
-      sendMessage({ nic, msg }).then(() => updateMsg(""));
+      sendMessage({ nic, msg, ts: Date.now() }).then(() => updateMsg(""));
     }
   }, [msg, nic, sendMessage]);
   const onEmoji = useCallback((emoji: BaseEmoji) => {
@@ -251,18 +256,13 @@ function NewMessage({ nic }: { nic: string }) {
   );
 }
 
-function ChatMessage({
-  nic,
-  msg,
-  decay,
-}: {
-  nic: string;
-  msg: string;
-  decay: number;
-}) {
+function ChatMessage({ nic, msg, decay, ts }: Message) {
   return (
     <div className={cx(s.message, s.decay, s[`decay${decay}`])}>
-      <div className={s.nic}>{nic}</div>
+      <div className={s.msgTitle}>
+        <span className={s.nic}>{nic}</span>{" "}
+        <span className={s.ts}>{new Date(ts).toLocaleTimeString()}</span>
+      </div>
       <pre className={s.content}>{msg}</pre>
     </div>
   );
@@ -273,8 +273,7 @@ function App() {
     <Router>
       <div className={s.container}>
         <Switch>
-          <Route path="/" exact children={<CreateOrJoinRoom />} />
-          <Route path="/create" exact children={<Create />} />
+          <Route path="/" exact children={<Create />} />
           <Route path="/join" exact children={<Join />} />
           <Route path="/:room" exact children={<Room />} />
         </Switch>

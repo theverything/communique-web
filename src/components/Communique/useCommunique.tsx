@@ -1,5 +1,10 @@
 import React, { useState, useEffect, createContext, useContext } from "react";
-import { Communique, initCommunique, Listener } from "./";
+import {
+  Communique,
+  initCommunique,
+  MessageListener,
+  MembershipListener,
+} from "./";
 
 function noop() {}
 
@@ -47,11 +52,23 @@ export function Provider({
   return <Context.Provider value={communique}>{children}</Context.Provider>;
 }
 
-export function useOnMessage(listener: Listener) {
+export function useOnMessage(listener: MessageListener) {
   const communique = useContext(Context);
 
   useEffect(() => {
     const removeListener = communique.onMessage(listener);
+
+    return () => {
+      removeListener();
+    };
+  }, [communique, listener]);
+}
+
+export function useOnMembership(listener: MembershipListener) {
+  const communique = useContext(Context);
+
+  useEffect(() => {
+    const removeListener = communique.onMembership(listener);
 
     return () => {
       removeListener();
