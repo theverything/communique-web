@@ -108,7 +108,7 @@ function Room() {
   return (
     // @ts-ignore
     <CommuniqueProvider
-      host="http://localhost:8080"
+      host="https://communique.jeffh.dev"
       topic={room}
       secret={hash.get("key") || ""}
       loader={() => "loading..."}
