@@ -219,7 +219,6 @@ export class Communique {
 
     return fetch(`${this._host}/api/dispatch`, {
       method: "POST",
-      mode: "no-cors",
       headers: {
         "Content-Type": "application/json",
       },
@@ -227,7 +226,7 @@ export class Communique {
         topic: this._topic,
         payload: payload,
       }),
-    }).then(() => console.log("done"));
+    });
   };
 }
 
